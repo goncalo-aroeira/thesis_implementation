@@ -1,0 +1,47 @@
+1️⃣ Data Collection & Preprocessing
+1.1 Understanding the Datasets
+You worked with two major datasets:
+
+GDSC Bulk RNA-seq Data (Cell-line drug response dataset)
+Contains cell lines (SANGER_MODEL_ID), tested drugs (DRUG_ID), and IC50 drug sensitivity values.
+Bulk RNA-seq measures average gene expression across all cells in a cell line.
+Single-Cell RNA-seq Data (RNAseq-ALL)
+Contains gene expression at the single-cell level.
+Each row corresponds to a gene expression value in a single cell (model_id, gene_symbol, fpkm).
+2️⃣ Data Processing and Optimization
+2.1 GDSC Data Cleaning
+Merged GDSC1 and GDSC2 datasets while ensuring all (cell line, drug) pairs were preserved.
+Removed duplicates and handled missing values in IC50, AUC, and pathway data.
+2.2 Single-Cell Data Aggregation (Pseudo-Bulk)
+Converted single-cell data into a "pseudo-bulk" representation:
+Averaged gene expression per cell line (model_id) to match GDSC cell-line format.
+Created a final (cell line × genes) matrix, ensuring each cell line has one expression profile.
+3️⃣ Feature Selection and Dimensionality Reduction
+3.1 Selecting Highly Variable Genes (HVGs)
+The original single-cell dataset contained 37,263 genes, making processing inefficient.
+Selected the top 2,000 most variable genes to retain biologically meaningful information.
+This step reduced memory usage by 90% while maintaining key gene expression variability.
+4️⃣ Aligning and Merging Bulk and Single-Cell Data
+4.1 Matching Cell Lines
+Mapped model_id from single-cell RNA-seq to SANGER_MODEL_ID in GDSC bulk data.
+Ensured each cell line in GDSC has a matching gene expression profile from single-cell RNA-seq.
+4.2 Merging Process
+Merging Challenges:
+GDSC has multiple rows per cell line (each drug tested separately).
+Pseudo-bulk single-cell data has one row per cell line.
+Solution:
+Kept multiple drug test rows per cell line while merging a single expression profile per cell line.
+5️⃣ Handling Memory Issues & Large-Scale Processing
+5.1 Breaking Down Data Processing
+The merged dataset was too large (~80GB RAM requirement).
+Used chunk processing to handle large files:
+Processed data in 100,000-row chunks to prevent memory crashes.
+Saved intermediate files instead of keeping everything in RAM.
+5.2 Efficient Data Merging
+Appended processed chunks to a final CSV file instead of merging in memory.
+This ensured the system never loaded too much data at once.
+6️⃣ Final Output
+Successfully created the aligned dataset (gdsc_single_cell_aligned.csv), which contains:
+Drug response values from GDSC.
+Cell-line gene expression (from pseudo-bulk single-cell data).
+A fully merged dataset for model training.
