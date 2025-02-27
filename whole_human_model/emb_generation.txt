@@ -1,0 +1,36 @@
+1. Introduction
+Overview of gene embeddings in computational biology.
+Importance of transformer models like scGPT in learning biologically meaningful representations.
+Objective: Extract pretrained gene embeddings for downstream analysis.
+2. Methodology
+2.1 Model and Pretrained Weights
+Description of scGPT as a transformer-based foundation model.
+Loading pretrained weights (best_model.pt) and configuration files (args.json, vocab.json).
+2.2 Gene Tokenization
+How genes are converted to tokens using vocab.json.
+Handling missing genes (e.g., using <pad> token).
+2.3 Extracting Gene Embeddings
+Using GeneEncoder to generate 512-dimensional embeddings.
+Code used for model inference and embedding extraction.
+2.4 Saving and Formatting the Embeddings
+Storing embeddings as a structured dataset (gene_embeddings.csv).
+Data format: genes as rows, embedding dimensions as columns.
+3. Validation and Analysis
+3.1 Dimensionality Check
+Ensuring embeddings have correct shape (num_genes, 512).
+3.2 Gene Similarity Analysis
+Computing cosine similarity between biologically related genes (e.g., TP53 vs. MDM2).
+3.3 Visualization of Embeddings
+Using UMAP to visualize gene clusters.
+Expected clustering behavior based on scGPT’s pretraining.
+4. Results
+Summary of generated embeddings.
+Examples of similar genes based on embedding distance.
+Initial insights from visualization (if applicable).
+5. Discussion
+How these embeddings compare to other methods.
+Potential downstream applications (e.g., gene clustering, regulatory network inference, perturbation prediction).
+Limitations and possible improvements.
+6. Conclusion and Future Work
+Summary of embedding extraction.
+Next steps, such as fine-tuning scGPT or integrating these embeddings with single-cell datasets.
