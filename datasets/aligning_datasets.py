@@ -1,110 +1,82 @@
 import pandas as pd
 import numpy as np
+import glob
 
 # ===========================
-# 1️⃣ Load and Optimize Datasets
+# 1️⃣ Load & Optimize Datasets
 # ===========================
 
-# Load GDSC bulk data (drug response)
+# Load GDSC bulk drug response data
 gdsc_bulk = pd.read_csv(
     "gdsc/gdsc_final_cleaned.csv",
     usecols=["SANGER_MODEL_ID", "DRUG_ID", "LN_IC50"],
     dtype={"SANGER_MODEL_ID": "str", "DRUG_ID": "int32", "LN_IC50": "float32"}
 )
 
-# Load Single-Cell RNA-seq Data
-sc_data = pd.read_csv(
-    "sc_data/rnaseq_all_data.csv",
-    usecols=["model_id", "gene_symbol", "fpkm"],
-    dtype={"model_id": "str", "gene_symbol": "str", "fpkm": "float32"}
+# Load Precomputed Cell by Gene Matrix (TPM values)
+cell_gene_matrix = pd.read_csv(
+    "sc_data/rnaseq_fpkm.csv",  # Change to actual filename
+    index_col=0  # Assuming model_id is the first column
 )
 
-print(f"GDSC Bulk Shape: {gdsc_bulk.shape}")
-print(f"Single-Cell Data Shape: {sc_data.shape}")
+# Ensure model_id column matches GDSC format
+cell_gene_matrix.index.name = "SANGER_MODEL_ID"
+
+print(f"✅ GDSC Bulk Shape: {gdsc_bulk.shape}")
+print(f"✅ Cell by Gene Matrix Shape: {cell_gene_matrix.shape}")
 
 # ===========================
-# 2️⃣ Aggregate Single-Cell Data into Pseudo-Bulk
+# 2️⃣ Normalize Gene Expression
 # ===========================
 
-# Filter single-cell data to include only cell lines present in GDSC
-sc_filtered = sc_data[sc_data["model_id"].isin(gdsc_bulk["SANGER_MODEL_ID"])]
+# Option 1: Normalize Before Aggregation (Log-T Normalize)
+normalized_before = np.log1p(cell_gene_matrix)
 
-# Aggregate gene expression per cell line
-pseudo_bulk = sc_filtered.groupby(["model_id", "gene_symbol"])["fpkm"].mean().reset_index()
+# Option 2: Aggregate First, Then Normalize (Pseudo-Bulk Mean)
+pseudo_bulk = cell_gene_matrix.groupby(cell_gene_matrix.index).mean()
 
-# Pivot table so that rows = cell lines, columns = genes
-pseudo_bulk_pivot = pseudo_bulk.pivot(index="model_id", columns="gene_symbol", values="fpkm").fillna(0)
+# Normalize After Aggregation
+normalized_after = np.log1p(pseudo_bulk)
 
-# Rename index to match GDSC format
-pseudo_bulk_pivot.index.name = "SANGER_MODEL_ID"
+# Save both versions for evaluation
+normalized_before.to_csv("pseudo_bulk/pseudo_bulk_normalized_before.csv")
+normalized_after.to_csv("pseudo_bulk/pseudo_bulk_normalized_after.csv")
 
-# Convert to DataFrame
-pseudo_bulk_pivot.reset_index(inplace=True)
-
-print(f"Pseudo-Bulk Shape Before Filtering: {pseudo_bulk_pivot.shape}")
+print("🔹 Normalization completed. Two versions saved: Before and After Aggregation.")
 
 # ===========================
 # 3️⃣ Select Top 2,000 Highly Variable Genes (HVGs)
 # ===========================
 
-# Compute variance only for gene expression columns
-gene_variances = pseudo_bulk_pivot.drop(columns=["SANGER_MODEL_ID"]).var(axis=0)
+# Compute variance for both normalization methods
+var_before = normalized_before.var(axis=0).nlargest(2000).index
+var_after = normalized_after.var(axis=0).nlargest(2000).index
 
-# Select the top 2,000 most variable genes
-top_variable_genes = gene_variances.nlargest(2000).index
+# Keep only highly variable genes
+filtered_before = normalized_before[var_before].reset_index()
+filtered_after = normalized_after[var_after].reset_index()
 
-# Keep only these genes
-pseudo_bulk_pivot = pseudo_bulk_pivot[["SANGER_MODEL_ID"] + list(top_variable_genes)]
+print(f"✅ Filtered Pseudo-Bulk Shape (Before Normalization): {filtered_before.shape}")
+print(f"✅ Filtered Pseudo-Bulk Shape (After Normalization): {filtered_after.shape}")
 
-print(f"Reduced Pseudo-Bulk Shape: {pseudo_bulk_pivot.shape}")
+# Save both filtered datasets
+filtered_before.to_csv("pseudo_bulk/pseudo_bulk_filtered_before.csv", index=False)
+filtered_after.to_csv("pseudo_bulk/pseudo_bulk_filtered_after.csv", index=False)
 
-
+"""
 # ===========================
 # 4️⃣ Merge GDSC Drug Response Data with Pseudo-Bulk
 # ===========================
 
-# Save pseudo-bulk to a CSV file
-pseudo_bulk_pivot.to_csv("pseudo_bulk/pseudo_bulk_filtered.csv", index=False)
-print("Saved pseudo-bulk dataset to disk.")
+# Choose the preferred dataset (before or after normalization)
+pseudo_bulk_final = filtered_after  # Change to `filtered_before` if needed
 
-# Free memory by reloading from disk
-del pseudo_bulk_pivot
+# Merge with GDSC drug response data
+merged_data = gdsc_bulk.merge(pseudo_bulk_final, on="SANGER_MODEL_ID", how="left")
 
-# Reload from disk
-pseudo_bulk_pivot = pd.read_csv("pseudo_bulk/pseudo_bulk_filtered.csv")
+# Save final dataset
+merged_data.to_csv("pseudo_bulk/gdsc_single_cell_aligned.csv", index=False)
 
-print("Pseudo-bulk dataset reloaded successfully!")
-print(f"Pseudo-Bulk Shape: {pseudo_bulk_pivot.shape}")
-
-chunk_size = 100000  # Adjust based on available RAM
-
-# Process GDSC bulk data in chunks
-for i, chunk in enumerate(pd.read_csv("gdsc/gdsc_final_cleaned.csv", chunksize=100000, dtype={"LN_IC50": "float32"}, low_memory=False)):
-    chunk = chunk.merge(pseudo_bulk_pivot, on="SANGER_MODEL_ID", how="left")
-    chunk.to_csv(f"pseudo_bulk/aligned_chunk_{i}.csv", index=False)
-    print(f"Processed and saved chunk {i+1}")
-
-import pandas as pd
-import glob
-
-# Get all chunk files
-chunk_files = sorted(glob.glob("pseudo_bulk/aligned_chunk_*.csv"))
-
-# Open a new CSV file and write chunks directly
-with open("pseudo_bulk/gdsc_single_cell_aligned.csv", "w", newline="") as outfile:
-    writer = None
-
-    for i, file in enumerate(chunk_files):
-        print(f"Merging chunk {i+1}/{len(chunk_files)}")
-
-        # Read only one chunk at a time
-        with open(file, "r") as chunk:
-            if i == 0:
-                # Write header for the first chunk
-                outfile.write(chunk.read())
-            else:
-                # Skip the header for other chunks
-                next(chunk)  # Skip first line (header)
-                outfile.write(chunk.read())
-
-print("Final aligned dataset saved successfully!")
+print("✅ Final aligned dataset saved successfully!")
+print(f"📌 Final Shape: {merged_data.shape}")
+"""
