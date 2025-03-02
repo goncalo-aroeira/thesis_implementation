@@ -15,7 +15,7 @@ xgb_model = xgb.XGBRegressor(n_estimators=100, tree_method="hist", random_state=
 xgb_model.fit(X_train, y_train)
 
 # Save model
-save_model(xgb_model, "xgboost_trained_model.json")
+save_model(xgb_model, "/home/goncalo/scgpt/baseline_models/models/xgboost_trained_model.json")
 
 # Evaluate model
 y_pred = xgb_model.predict(X_test)

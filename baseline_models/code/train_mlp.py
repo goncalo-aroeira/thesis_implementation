@@ -4,6 +4,7 @@ from tensorflow.keras.layers import Dense, Dropout
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 from data_preprocessing import prepare_data
+from utils import save_model
 
 # Load data
 X, y = prepare_data()
@@ -23,6 +24,9 @@ mlp_model = Sequential([
 
 mlp_model.compile(optimizer='adam', loss='mse', metrics=['mae'])
 mlp_model.fit(X_train, y_train, epochs=50, batch_size=32, validation_data=(X_test, y_test))
+
+# Save model
+save_model(mlp_model, "/home/goncalo/scgpt/baseline_models/models/mlp_trained_model.json")
 
 # Evaluate model
 mlp_pred = mlp_model.predict(X_test).flatten()

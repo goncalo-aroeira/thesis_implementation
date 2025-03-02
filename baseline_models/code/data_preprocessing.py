@@ -3,7 +3,7 @@ import numpy as np
 
 def load_gene_embeddings():
     """Loads the scGPT gene embeddings (precomputed)."""
-    return pd.read_csv("pseudo_bulk_gene_embeddings.csv", index_col=0)
+    return pd.read_csv("/home/goncalo/scgpt/baseline_models/data/pseudo_bulk_gene_embeddings.csv", index_col=0)
 
 def load_ic50_data():
     """Loads and filters GDSC IC50 dataset."""
