@@ -1,4 +1,4 @@
-import pandas as pd
+import polars as pl
 import numpy as np
 import glob
 
@@ -7,14 +7,14 @@ import glob
 # ===========================
 
 # Load GDSC bulk drug response data
-gdsc_bulk = pd.read_csv(
-    "gdsc/gdsc_final_cleaned.csv",
+gdsc_bulk = pl.read_parquet(
+    "gdsc/gdsc_final_cleaned.parquet",
     usecols=["SANGER_MODEL_ID", "DRUG_ID", "LN_IC50"],
     dtype={"SANGER_MODEL_ID": "str", "DRUG_ID": "int32", "LN_IC50": "float32"}
 )
 
 # Load Precomputed Cell by Gene Matrix (TPM values)
-cell_gene_matrix = pd.read_csv(
+cell_gene_matrix = pl.read_parquet(
     "sc_data/rnaseq_fpkm.csv",  # Change to actual filename
     index_col=0  # Assuming model_id is the first column
 )
@@ -63,7 +63,7 @@ print(f"✅ Filtered Pseudo-Bulk Shape (After Normalization): {filtered_after.sh
 filtered_before.to_csv("pseudo_bulk/pseudo_bulk_filtered_before.csv", index=False)
 filtered_after.to_csv("pseudo_bulk/pseudo_bulk_filtered_after.csv", index=False)
 
-"""
+
 # ===========================
 # 4️⃣ Merge GDSC Drug Response Data with Pseudo-Bulk
 # ===========================
@@ -79,4 +79,3 @@ merged_data.to_csv("pseudo_bulk/gdsc_single_cell_aligned.csv", index=False)
 
 print("✅ Final aligned dataset saved successfully!")
 print(f"📌 Final Shape: {merged_data.shape}")
-"""

@@ -57,8 +57,9 @@ print("Generated Embeddings Shape:", embeddings.shape)  # Expected: (1, ntoken, 
 # Convert embeddings to a NumPy array
 embeddings_array = embeddings.squeeze(0).numpy()
 
-# Save as CSV for easy access
+# Save as Parquet
 df = pd.DataFrame(embeddings_array, index=all_genes)
-df.to_csv("gene_embeddings.csv")
+df.index.name = "gene"
+df.to_parquet("gene_embeddings.parquet", index=True)
 
-print("Embeddings saved to gene_embeddings.csv!")
+print("Embeddings saved to gene_embeddings.parquet!")
