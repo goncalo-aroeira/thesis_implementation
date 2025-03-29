@@ -1,0 +1,70 @@
+# Predicting Drug Response Using Gene Expression and Gene Embeddings
+
+## Introduction
+
+The goal of this study is to establish a solid baseline for predicting drug response, measured by IC50 values, using gene expression profiles from pseudo-bulk single-cell RNA-sequencing data and gene-level embeddings obtained from a pre-trained scGPT model. We develop and evaluate individual machine learning models for each drug to assess how well gene expression patterns can predict cellular drug sensitivity.
+
+This process not only helps evaluate the effectiveness of conventional machine learning approaches (like XGBoost) for this task, but also provides a foundation for comparing more advanced models in the future, such as deep learning architectures or multimodal transformers.
+
+## Theoretical Background
+
+### 1. Gene Expression and Drug Response
+Gene expression data reflects the transcriptional activity of genes in a cell or tissue sample. Changes in gene expression patterns can be indicative of how a particular cell responds to external perturbations, including drugs. IC50 (half-maximal inhibitory concentration) is a standard measure used to evaluate drug efficacy. Lower IC50 values typically indicate higher sensitivity to a drug.
+
+By modeling the relationship between gene expression levels and IC50 values, we can potentially predict how new or untested cells will respond to a given drug.
+
+### 2. Highly Variable Genes (HVGs)
+In single-cell RNA-seq data, not all genes are equally informative. Highly variable genes (HVGs) are those with significant variation across cell lines or conditions and are more likely to capture biologically meaningful differences. Selecting the top HVGs reduces noise and dimensionality while preserving key signal.
+
+### 3. Gene Embeddings from scGPT
+Gene embeddings are dense, low-dimensional vector representations of genes that encode contextual and functional similarity. These embeddings were derived from a scGPT model trained on massive single-cell data, capturing gene-gene relationships and regulatory context.
+
+Incorporating gene embeddings can enhance machine learning models by providing rich biological priors beyond raw expression levels. We achieve this by computing expression-weighted averages of gene embeddings for each sample.
+
+### 4. XGBoost for Regression
+XGBoost (Extreme Gradient Boosting) is a powerful, tree-based ensemble learning method known for high performance on structured data. For each drug, we train an individual XGBoost regressor to map gene expression and embedding-derived features to IC50 values.
+
+## Practical Implementation
+
+### Step 1: Data Preparation
+- **Single-cell pseudo-bulk data**: Single-cell RNA-seq data was aggregated into pseudo-bulk profiles by averaging expression levels across cells for each cell line.
+- **HVG filtering**: We selected the top 2000 highly variable genes using variance-based filtering.
+- **Gene expression normalization**: Log1p normalization was applied to reduce skewness and approximate Gaussian distributions.
+
+### Step 2: Merging Gene Embeddings
+We loaded a gene embedding matrix (shape: 37307 genes × 512 dimensions) and mapped it to the 2000 selected HVGs. For each cell line, we computed a weighted average of embeddings using the normalized expression values as weights. This yielded a 512-dimensional vector summarizing gene context per sample.
+
+### Step 3: Merging with Drug Response Data
+We joined the processed gene expression and embedding features with the GDSC bulk drug response data, which includes:
+- `SANGER_MODEL_ID`: Cell line identifier
+- `DRUG_ID`: Unique drug identifier
+- `LN_IC50`: Log-transformed IC50 value
+
+### Step 4: Model Training
+For each unique drug ID:
+- The data was filtered to cell lines treated with that drug.
+- The input features included:
+  - Normalized expression values of the 2000 HVGs
+  - A 512-dimensional vector from the gene embeddings
+  - The drug ID as a numeric input (optional)
+- An XGBoost regressor was trained using an 80/20 train-test split.
+- Model performance was evaluated using RMSE (Root Mean Squared Error) and R² score.
+
+### Step 5: Model Saving
+Each trained model was serialized and saved using `joblib` for future inference or analysis.
+
+## Key Benefits
+- **Biological interpretability**: Using HVGs and gene embeddings provides interpretable features grounded in biology.
+- **Scalability**: Training individual models per drug allows modular evaluation and parallelization.
+- **Transferability**: The same pipeline can be adapted for other datasets or modeling tasks (e.g., drug combination prediction).
+
+## Limitations and Future Directions
+- **Data sparsity**: Some drugs have few associated cell lines, limiting model robustness.
+- **Generalization**: XGBoost is effective but may not fully capture complex nonlinearities; future work could explore deep learning alternatives.
+- **Embedding integration**: More sophisticated strategies (e.g., concatenation, attention over genes) could be explored to leverage gene embeddings.
+
+## Conclusion
+This baseline establishes a reproducible, interpretable, and biologically informed pipeline for drug response prediction. It combines classical machine learning with modern embedding-based representations to bridge the gap between omics data and pharmacogenomics applications.
+
+This approach serves as a valuable benchmark for future exploration of more advanced, deep, or multimodal models in precision oncology.
+
