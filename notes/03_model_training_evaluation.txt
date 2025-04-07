@@ -1,0 +1,107 @@
+
+03 - Model Training and Evaluation
+==================================
+
+🧠 1. Objective
+
+Train machine learning models to predict drug sensitivity (LN_IC50) from gene expression profiles on a per-drug basis.
+
+Each drug has its own model trained using only the `(cell line, drug)` pairs where that drug was tested.
+
+---
+
+🧾 2. Input Features
+
+Two types of input features were used:
+
+- **PCA Components**: Derived from dimensionality reduction on pseudo-bulk expression matrix.
+- **Top HVGs**: Top 2000 most variable genes selected by variance.
+
+All models are trained using one of these two representations of gene expression.
+
+---
+
+📦 3. Model Types
+
+We implemented and evaluated the following models:
+
+### 🟡 Baseline Models
+- **Dummy Regressor**: Predicts the mean value of the training set.
+- **Ridge Regression (L2)**: Linear regression with L2 regularization.
+- **Elastic Net**: Combines L1 and L2 regularization.
+
+### 🔵 Machine Learning Models
+- **MLP Regressor**: Multi-layer neural network with hidden layers.
+- **Random Forest**: Ensemble of decision trees using bagging.
+- **XGBoost**: Gradient boosting decision tree ensemble.
+
+---
+
+🔁 4. Training Strategy
+
+- **One model per drug**: Each drug’s model is trained only on its available cell line profiles.
+- **Cross-validation**: All models used **5-fold cross-validation** for evaluation and hyperparameter tuning.
+- Models were skipped if the number of samples < 10.
+
+---
+
+📊 5. Evaluation Metrics
+
+Each model was evaluated using:
+
+- **Root Mean Squared Error (RMSE)**
+- **Coefficient of Determination (R²)**
+- **Mean ± Standard Deviation across folds**
+
+Metric distributions were plotted to analyze performance across drugs.
+
+---
+
+💾 6. Model Saving
+
+Every trained model is saved as a `.pkl` file using `joblib`, organized into folders by model type:
+
+- `models_dummy/`
+- `models_ridge/`
+- `models_elasticnet/`
+- `models_mlp/`
+- `models_rf/`
+- `models_xgb/`
+
+Performance summaries for each model type are stored in:
+- `model_performance_summary.csv` (per model folder)
+
+---
+
+📈 7. Visual Outputs
+
+Metric distribution plots:
+- **RMSE distribution**
+- **R² distribution**
+
+These help visualize model generalization capability across all drugs.
+
+---
+
+📌 8. Remarks
+
+- Cross-validation helps avoid overfitting, especially with small sample sizes.
+- Ridge and ElasticNet were regularized to handle multicollinearity in gene expression.
+- MLP used early stopping and adaptive learning.
+- RF and XGB performed competitively with nonlinear capabilities.
+
+---
+
+📁 Output Structure (Summary)
+
+| Folder/File                           | Description                            |
+|--------------------------------------|----------------------------------------|
+| models_dummy/                        | Dummy model .pkl and CSV               |
+| models_ridge/                        | Ridge model .pkl and CSV               |
+| models_elasticnet/                   | ElasticNet model .pkl and CSV          |
+| models_mlp/                          | MLP model .pkl and CSV                 |
+| models_rf/                           | Random Forest .pkl and CSV             |
+| models_xgb/                          | XGBoost .pkl and CSV                   |
+| model_performance_summary.csv        | Evaluation metrics per drug/model      |
+| RMSE and R² plots (matplotlib)       | Visual evaluation of distributions     |
+

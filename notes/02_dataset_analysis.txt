@@ -1,0 +1,83 @@
+
+02 - Exploratory Analysis and Correlation Insights
+==================================================
+
+📊 1. Purpose
+
+This section summarizes the statistical and visual analyses performed to understand the distribution and structure of the dataset, relationships between gene expression and drug sensitivity, and to guide feature and model selection.
+
+---
+
+📈 2. IC50 Distribution
+
+- We visualized the distribution of `LN_IC50` values across all `(cell line, drug)` pairs.
+- This helped assess the overall variability in drug response.
+- Distribution was found to be relatively wide with a skew toward resistant responses.
+
+📁 Output: `statistics/ic50_distribution.png`
+
+---
+
+💊 3. Cell Line Count Per Drug
+
+- Counted how many cell lines were tested per drug.
+- This showed data imbalance — some drugs had over 100 cell lines tested, others less than 10.
+- Drugs with too few samples (<10) were excluded from modeling.
+
+📁 Output: `statistics/cell_lines_per_drug.png`
+
+---
+
+🧬 4. Gene-IC50 Correlation
+
+- Calculated correlation between each gene's expression and `LN_IC50`.
+- Reported top 10 **positively** and **negatively** correlated genes.
+- Useful for identifying predictive genes and biologically relevant signals.
+
+📁 Output: `statistics/gene_ic50_correlations.csv`
+
+---
+
+📐 5. Gene-to-Gene Correlation Matrix
+
+- Computed a full gene–gene correlation matrix for all features (PCA or HVGs).
+- Visualized with a heatmap to identify clusters of co-expressed genes.
+
+📁 Output: `statistics/gene_correlation_matrix.png`
+
+---
+
+📊 6. PCA Component Analysis
+
+- Analyzed explained variance per principal component.
+- Helped determine how many PCs were necessary to retain 90–95% of variance.
+- Used this to choose the number of components for dimensionality reduction.
+
+📁 Outputs:
+- Variance per PC: `pca_variance.png`
+- Cumulative variance: `pca_cumulative_variance.png`
+
+---
+
+🧬 7. t-SNE and UMAP Visualization
+
+- Applied t-SNE and UMAP to PCA-reduced expression data.
+- Projected high-dimensional cell line profiles into 2D for visualization.
+- No strong clustering observed, but a useful overview of data manifold.
+
+📁 Outputs:
+- `tsne_visualization.png`
+- `umap_visualization.png`
+
+---
+
+🧽 8. Quality Filtering
+
+- Detected and removed a small set of cell lines present in GDSC but not in the single-cell dataset.
+- This fixed PCA NaN issues and ensured alignment consistency.
+
+---
+
+✅ Summary
+
+These exploratory analyses guided feature selection, validated preprocessing, and provided useful biological and statistical insight into the modeling task.

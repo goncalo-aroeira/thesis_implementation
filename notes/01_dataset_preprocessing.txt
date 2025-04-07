@@ -1,0 +1,79 @@
+
+01 - Dataset Preprocessing, Alignment & Feature Engineering
+============================================================
+
+🧬 1. Dataset Preprocessing, Alignment & Feature Engineering
+
+This section documents how the single-cell and bulk drug sensitivity data were processed, aligned, and transformed into a machine learning-ready format.
+
+📁 Datasets Used
+----------------
+- Single-cell RNA-seq: `rnaseq_fpkm.parquet`  
+  Contains gene expression values (FPKM) per cell for various cancer cell lines.
+- Drug Sensitivity: `gdsc_final_cleaned.parquet`  
+  From GDSC, includes log(IC50) values for `(cell_line, drug)` pairs.
+- Aligned Dataset Output:
+  - `gdsc_single_cell_aligned.parquet`
+  - `gdsc_single_cell_pca.parquet`
+  - `gdsc_single_cell_top_hvgs.parquet`
+
+🧹 2. Preprocessing: Single-Cell Expression
+------------------------------------------
+1. Initial Shape:  
+   - Columns: `[SANGER_MODEL_ID, model_name, dataset_name, data_source, gene_id, ... <samples>]`
+   - Each row = a gene; each column = a single-cell sample ID
+
+2. Transpose Matrix  
+   - Convert the matrix so **rows = samples**, **columns = genes**
+   - Retain `SANGER_MODEL_ID` as index
+
+3. Drop Metadata Columns  
+   - Removed: `model_name`, `dataset_name`, `data_source`, `gene_id`
+
+4. Remove Initial Gene-ID Row  
+   - First row of values was metadata (gene_id list) → removed manually
+
+5. NaN Check & Removal  
+   - Verified and removed any columns with missing values
+
+6. log1p Normalization  
+   - Applied `log1p(x)` to stabilize variance and reduce skew
+   - Note: Although FPKM is normalized, log1p is still applied for numerical stability and comparability across cell lines
+
+7. Aggregation to Pseudo-Bulk  
+   - Grouped by `SANGER_MODEL_ID` (cell line ID)
+   - Took the **mean** expression across all single cells of each cell line
+
+🔗 3. Dataset Alignment with GDSC
+--------------------------------
+- Merged Pseudo-Bulk Matrix with the GDSC drug response table
+- Join key: `SANGER_MODEL_ID`
+- Resulting rows: one row per `(cell line, drug)` pair with associated IC50 and expression profile
+
+⚙️ 4. Feature Engineering: Two Versions
+--------------------------------------
+A. PCA Transformation
+- Applied **StandardScaler**
+- Reduced dimensionality using `PCA(n_components=10–50)`
+- Saved:
+  - `gdsc_single_cell_pca.parquet`
+  - `pca_model.pkl` and `scaler.pkl`
+
+B. Top HVGs (Highly Variable Genes)
+- Computed variance across genes in pseudo-bulk matrix
+- Selected top `N=2000` most variable genes
+- Final dataset saved as `gdsc_single_cell_top_hvgs.parquet`
+
+⚠️ 5. Cell Line Filtering (Final Step)
+-------------------------------------
+- Ensured only cell lines present in **both** single-cell and GDSC datasets were retained
+- Removed unmatched cell lines to avoid missing PCA features
+
+📁 Final Outputs
+----------------
+| File | Description |
+|------|-------------|
+| gdsc_single_cell_aligned.parquet      | Aligned expression + GDSC data (full genes) |
+| gdsc_single_cell_pca.parquet          | PCA-reduced version of aligned dataset |
+| gdsc_single_cell_top_hvgs.parquet     | Top 2000 HVG expression features aligned with GDSC |
+| pca_model.pkl + scaler.pkl            | Trained transformation objects |
