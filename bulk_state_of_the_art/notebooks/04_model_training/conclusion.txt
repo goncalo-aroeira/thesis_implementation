@@ -1,0 +1,73 @@
+# 📊 Model Evaluation Summary
+
+## 🧪 Baseline Model Comparison
+
+### Models Evaluated:
+- Dummy Regressor
+- Ridge Regression
+- Elastic Net
+
+### Performance Summary:
+
+| Model       | RMSE (Mean ± Std) | RMSE (Median) | R² (Mean ± Std) | R² (Median) |
+|-------------|-------------------|----------------|------------------|--------------|
+| Dummy       | 1.35 ± 0.42       | 1.30           | -0.008 ± 0.009   | -0.006       |
+| Ridge       | 1.33 ± 0.41       | 1.27           | 0.025 ± 0.076    | 0.023        |
+| Elastic Net | 1.32 ± 0.41       | 1.27           | 0.028 ± 0.074    | 0.025        |
+
+📈 Insights from Boxplots (Simple Models)
+- All models have similar RMSE distributions, with Elastic Net performing slightly better overall.
+- Dummy regressor shows consistently negative R² scores, as expected.
+- Ridge and ElasticNet provide modest positive R², showing that even simple linear models can capture some variance in the drug sensitivity signal.
+- ElasticNet has the highest median and mean R², suggesting a slight but consistent improvement in predictive capability over Ridge.
+
+✅ Conclusion (Simple Models)
+- Elastic Net emerges as the best performer among simple models, outperforming Ridge in both RMSE and R².
+- Despite the simplicity, Ridge and ElasticNet outperform the Dummy model, validating the signal present in the gene expression features.
+- These models establish a reliable baseline for comparison against more complex architectures.
+
+
+## 🌲💥 Complex Model Comparison
+
+### Models Evaluated:
+- Random Forest
+- XGBoost
+
+### Performance Summary:
+
+| Model        | RMSE (Mean ± Std) | RMSE (Median) | R² (Mean ± Std) | R² (Median) |
+|--------------|-------------------|----------------|------------------|--------------|
+| RandomForest | 1.31 ± 0.40       | 1.26           | 0.039 ± 0.130    | 0.037        |
+| XGBoost      | 1.35 ± 0.41       | 1.30           | -0.021 ± 0.131   | -0.030       |
+
+📈 Insights from Boxplots (Complex Models)
+- Random Forest consistently outperforms XGBoost in both RMSE and R² across most drugs.
+- XGBoost displays a slightly wider spread and consistently negative R², indicating worse generalization.
+- Random Forest achieves positive R² on average, suggesting it is able to extract more meaningful signal from the PCA features.
+
+✅ Conclusion (Complex Models)
+- Random Forest is the superior complex model in this context.
+- XGBoost may not generalize well to this specific task, possibly due to overfitting or sensitivity to feature distribution in PCA space.
+- Random Forest is more stable and robust, making it a strong candidate for final model selection or ensembling.
+
+
+
+## 🏆 Final Comparison: Elastic Net vs Random Forest
+
+### Performance Summary:
+
+| Model        | RMSE (Mean ± Std) | RMSE (Median) | R² (Mean ± Std) | R² (Median) |
+|--------------|-------------------|----------------|------------------|--------------|
+| Elastic Net  | 1.32 ± 0.41       | 1.27           | 0.028 ± 0.074    | 0.025        |
+| Random Forest| 1.31 ± 0.40       | 1.26           | 0.039 ± 0.130    | 0.037        |
+
+📈 Visual Summary (Elastic Net vs Random Forest)
+- Both models display nearly identical RMSE distributions, with Random Forest slightly better on average.
+- Random Forest clearly outperforms Elastic Net in R², with higher median and larger positive spread.
+- Elastic Net performs consistently, while RF has higher variance but better upper-tail performance.
+
+✅ Final Conclusion
+- Both models offer strong baselines for drug sensitivity prediction using PCA-compressed gene expression.
+- Elastic Net provides simplicity, interpretability, and stable performance — ideal for use cases needing fast or explainable models.
+- Random Forest delivers better overall performance, especially in terms of variance explained (R²), and is recommended as the best-performing model.
+- These results justify using Random Forest for future experiments, or as a reference in comparisons with deep learning or transfer learning models.
