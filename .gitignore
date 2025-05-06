@@ -1,6 +1,11 @@
 *.csv
 *.parquet
 *.pkl
+*h5ad
+*.gz
+*.gficf
+*rds
+/home/goncalo/tese/thesis_implementation/single_cell/pan_cancer/data/SCP542/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
