@@ -5,6 +5,8 @@
 *.gz
 *.gficf
 *rds
+*.npy
+*.ckpt
 /home/goncalo/tese/thesis_implementation/single_cell/pan_cancer/data/SCP542/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
