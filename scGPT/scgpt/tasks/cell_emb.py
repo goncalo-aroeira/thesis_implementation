@@ -50,7 +50,7 @@ def get_batch_cell_embeddings(
 
     count_matrix = adata.X
     count_matrix = (
-        count_matrix if isinstance(count_matrix, np.ndarray) else count_matrix.A
+        count_matrix if isinstance(count_matrix, np.ndarray) else count_matrix.toarray()
     )
 
     # gene vocabulary ids
@@ -156,30 +156,16 @@ def embed_data(
     use_fast_transformer: bool = True,
     return_new_adata: bool = False,
 ) -> AnnData:
-    """
-    Preprocess anndata and embed the data using the model.
+    print("🔹 Starting embedding pipeline...")
 
-    Args:
-        adata_or_file (Union[AnnData, PathLike]): The AnnData object or the path to the
-            AnnData object.
-        model_dir (PathLike): The path to the model directory.
-        gene_col (str): The column in adata.var that contains the gene names.
-        max_length (int): The maximum length of the input sequence. Defaults to 1200.
-        batch_size (int): The batch size for inference. Defaults to 64.
-        obs_to_save (Optional[list]): The list of obs columns to save in the output adata.
-            Useful for retaining meta data to output. Defaults to None.
-        device (Union[str, torch.device]): The device to use. Defaults to "cuda".
-        use_fast_transformer (bool): Whether to use flash-attn. Defaults to True.
-        return_new_adata (bool): Whether to return a new AnnData object. If False, will
-            add the cell embeddings to a new :attr:`adata.obsm` with key "X_scGPT".
-
-    Returns:
-        AnnData: The AnnData object with the cell embeddings.
-    """
+    # Load data
     if isinstance(adata_or_file, AnnData):
         adata = adata_or_file
+        print("✅ AnnData object loaded directly")
     else:
+        print(f"📂 Reading AnnData from file: {adata_or_file}")
         adata = sc.read_h5ad(adata_or_file)
+        print("✅ AnnData file loaded")
 
     if isinstance(obs_to_save, str):
         assert obs_to_save in adata.obs, f"obs_to_save {obs_to_save} not in adata.obs"
@@ -190,50 +176,52 @@ def embed_data(
         adata.var["index"] = adata.var.index
     else:
         assert gene_col in adata.var
+    print(f"📑 Using gene column: {gene_col}")
 
+    # Set device
     if device == "cuda":
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if not torch.cuda.is_available():
-            print("WARNING: CUDA is not available. Using CPU instead.")
+            print("⚠️ WARNING: CUDA is not available. Using CPU instead.")
+    print(f"🖥️ Using device: {device}")
 
-    # LOAD MODEL
+    # Load model files
     model_dir = Path(model_dir)
     vocab_file = model_dir / "vocab.json"
     model_config_file = model_dir / "args.json"
     model_file = model_dir / "best_model.pt"
-    pad_token = "<pad>"
-    special_tokens = [pad_token, "<cls>", "<eoc>"]
+    print(f"📦 Loading model from: {model_dir}")
 
     # vocabulary
+    print("📘 Loading vocabulary...")
     vocab = GeneVocab.from_file(vocab_file)
+    special_tokens = ["<pad>", "<cls>", "<eoc>"]
     for s in special_tokens:
         if s not in vocab:
             vocab.append_token(s)
+    print("✅ Vocabulary loaded")
+
+    # gene ID mapping
+    print("🧬 Mapping genes to vocab IDs...")
     adata.var["id_in_vocab"] = [
         vocab[gene] if gene in vocab else -1 for gene in adata.var[gene_col]
     ]
     gene_ids_in_vocab = np.array(adata.var["id_in_vocab"])
-    logger.info(
-        f"match {np.sum(gene_ids_in_vocab >= 0)}/{len(gene_ids_in_vocab)} genes "
-        f"in vocabulary of size {len(vocab)}."
-    )
+    match_count = np.sum(gene_ids_in_vocab >= 0)
+    print(f"🔍 Matched {match_count} / {len(gene_ids_in_vocab)} genes in vocab")
     adata = adata[:, adata.var["id_in_vocab"] >= 0]
 
+    # Load model config
+    print("⚙️ Loading model config...")
     with open(model_config_file, "r") as f:
         model_configs = json.load(f)
-
-    # Binning will be applied after tokenization. A possible way to do is to use the unified way of binning in the data collator.
 
     vocab.set_default_index(vocab["<pad>"])
     genes = adata.var[gene_col].tolist()
     gene_ids = np.array(vocab(genes), dtype=int)
 
-    # all_counts = adata.layers["counts"]
-    # num_of_non_zero_genes = [
-    #     np.count_nonzero(all_counts[i]) for i in range(all_counts.shape[0])
-    # ]
-    # max_length = min(max_length, np.max(num_of_non_zero_genes) + 1)
-
+    # Initialize model
+    print("🧠 Building TransformerModel...")
     model = TransformerModel(
         ntoken=len(vocab),
         d_model=model_configs["embsize"],
@@ -255,11 +243,15 @@ def embed_data(
         fast_transformer_backend="flash",
         pre_norm=False,
     )
+
+    print("📥 Loading pretrained model weights...")
     load_pretrained(model, torch.load(model_file, map_location=device), verbose=False)
     model.to(device)
     model.eval()
+    print("✅ Model ready for inference")
 
-    # get cell embeddings
+    # Compute embeddings
+    print("🚀 Computing cell embeddings...")
     cell_embeddings = get_batch_cell_embeddings(
         adata,
         cell_embedding_mode="cls",
@@ -271,10 +263,14 @@ def embed_data(
         gene_ids=gene_ids,
         use_batch_labels=False,
     )
+    print("✅ Embedding computation complete")
 
     if return_new_adata:
+        print("📤 Returning new AnnData with embeddings")
         obs_df = adata.obs[obs_to_save] if obs_to_save is not None else None
         return sc.AnnData(X=cell_embeddings, obs=obs_df, dtype="float32")
 
     adata.obsm["X_scGPT"] = cell_embeddings
+    print("📥 Stored embeddings in adata.obsm['X_scGPT']")
     return adata
+
