@@ -1,0 +1,114 @@
+**Gene Expression-Based Drug Response Prediction Pipeline (Summary Document)**
+
+This document outlines the full pipeline for processing gene expression data and applying it to predictive modeling for drug resistance, using both traditional machine learning models and embedding-based representations via scFoundation. The pipeline is tailored for bulk RNA-seq data and integrates multiple normalization strategies, dimensionality reduction, and embedding inference.
+
+---
+
+### 1. **Raw Data Input**
+
+* Sources: RNA-seq data in `.csv` or `.parquet` formats, possibly from sources like Broad.
+* Contains: Read counts, gene IDs, model (cell line) IDs.
+
+---
+
+### 2. **Data Preprocessing**
+
+* Filter genes and cell lines to ensure all are valid.
+* Keep `htseq_read_count` only (remove missing entries).
+* Reshape matrix: genes as columns, cell lines (models) as rows.
+* Index the dataframe by `model_id`.
+
+---
+
+### 3. **Expression Formats Available**
+
+* **Raw Read Counts**
+* **FPKM (Fragments Per Kilobase of transcript per Million mapped reads)**
+* **TPM (Transcripts Per Million)**
+
+Each of these can be used differently depending on the downstream task.
+
+---
+
+### 4. **Voom Transformation (for Traditional ML)**
+
+* Tool: Performed using R and `rpy2` interface.
+* Input: Raw read counts.
+* Process:
+
+  * Convert to matrix (genes x samples).
+  * Use edgeR to create `DGEList`.
+  * Normalize with `calcNormFactors`.
+  * Apply `voom()` transformation from `limma`.
+* Output: log2-counts per million with precision weights.
+
+This matrix can then be used with dimensionality reduction methods (like PCA or t-SNE) and used as input to models like:
+
+* Elastic Net
+* Random Forest
+* SVM, etc.
+
+---
+
+### 5. **Embeddings via scFoundation**
+
+* Format: Accepts a matrix of 19,264 genes per cell.
+* Gene selection: Matches with a predefined gene index.
+* Input normalization:
+
+  * If using `--pre_normalized T` for bulk data: expects log10(sum of gene expression).
+  * If using `--pre_normalized F`: raw counts (and scFoundation will normalize).
+* Resolution: `--tgthighres t4` recommended.
+* Output: Embeddings representing each cell line's transcriptomic state.
+
+---
+
+### 6. **Tissue Metadata Integration**
+
+* Tissue labels are merged using `SANGER_MODEL_ID`.
+* Cleaned and one-hot encoded.
+* Can be used to color plots (like t-SNE) or as features in ML models.
+
+---
+
+### 7. **Modeling for Drug Response Prediction**
+
+* Response variable: drug sensitivity/resistance (from pharmacogenomic datasets).
+* Features:
+
+  * Option 1: Voom-transformed expression matrix.
+  * Option 2: scFoundation embeddings.
+  * Option 3: Possibly raw or log-transformed TPM/FPKM (not preferred for modeling).
+* Strategy:
+
+  * Train models with cross-validation.
+  * Compare performance using R^2, RMSE, etc.
+  * Optionally: subset analysis by tissue or drug class.
+
+---
+
+### 8. **Comparison Plan**
+
+* Objective: Compare how voom-transformed data vs. scFoundation embeddings perform in predicting drug resistance.
+* Ensure same preprocessing for each comparison (e.g., use same sample set).
+* Analyze and visualize performance metrics per drug.
+
+---
+
+### 9. **Storage Format**
+
+* Use `.parquet` to save intermediate matrices for memory-efficient access.
+* Maintain a mapping file between gene symbols and Ensembl IDs if needed.
+
+---
+
+### 10. **Tools Required**
+
+* Python (pandas, numpy, sklearn, matplotlib, seaborn)
+* R via `rpy2` (limma, edgeR)
+* scFoundation pre-trained model and inference scripts
+* scanpy (for PCA or AnnData manipulation if needed)
+
+---
+
+This workflow is flexible and supports both exploratory analysis and production-scale modeling. Adjust steps depending on the input format and modeling objective.
