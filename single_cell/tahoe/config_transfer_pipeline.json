@@ -1,0 +1,23 @@
+{
+  "tahoe_parquet": "PATH/TO/tahoe.parquet",
+  "bulk_table_path": "PATH/TO/bulk_training.parquet",
+  "output_dir": "outputs_transfer_pipeline",
+  "artifacts_dir": "artifacts_transfer_pipeline",
+  "pc_prefix": "PC",
+  "n_pcs": 30,
+  "dmso_label": "DMSO_TF",
+  "tissue_prefix": "Tissue_",
+  "growth_col": "day4_day1_ratio",
+  "sanger_col": "SANGER_MODEL_ID",
+  "bulk_drug_col": "DRUG_ID",
+  "bulk_target_col": "LN_IC50",
+  "tahoe_drug_col": "drug",
+  "random_state": 13,
+  "cv_folds": 5,
+  "train_models_if_missing": true,
+  "do_procrustes_alignment": true,
+  "require_min_overlap_for_alignment": 5,
+  "restrict_to_drugs": null,
+  "bulk_pca_loadings_path": null,
+  "gene_id_col": "gene_id"
+}
